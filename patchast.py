@@ -16,6 +16,7 @@ parser.add_argument('src')
 parser.add_argument('patch')
 parser.add_argument('dst')
 
+
 def parse_name_idx(name_idx):
     m = name_idx_re.search(name_idx)
     if m is not None:
@@ -24,6 +25,7 @@ def parse_name_idx(name_idx):
     m = name_re.search(name_idx)
     g = m.groups()
     return g[0], None
+
 
 def navigate(tree, route):
     route = route.split('.')
@@ -39,8 +41,8 @@ def navigate(tree, route):
 
 def apply_file_patch(src, patch):
     # make sure we don't have dictionary_item_added or dictionary_item_removed
-    if patch.has_key('dictionary_item_added') \
-       or patch.has_key('dictionary_item_removed'):
+    if 'dictionary_item_added' in patch.keys() \
+           or 'dictionary_item_removed' in patch.keys():
         raise KeyError
 
     src_ast = ast.parse(src)
@@ -64,18 +66,21 @@ def apply_file_patch(src, patch):
             else:
                 # This is attribute assignment
                 try:
-                    new_val = change['new_value']  # maybe we can use the value as is
+                    # maybe we can use the value as is
+                    new_val = change['new_value']
                     if type(change['new_value']) in (type(''), type(u'')):
                         new_val = ast.parse(change['new_value']).body[0].value
                         pass
                     setattr(obj, name, new_val)
                 except KeyError:
                     # no `new_value`, op change
-                    classname = change['new_type'].split('.')[1][:-2]  # not nice
+                    # not nice
+                    classname = change['new_type'].split('.')[1][:-2]
                     setattr(obj, name, getattr(ast, classname)())
 
     if 'iterable_item_removed' in patch.keys():
-        items = sorted(patch['iterable_item_removed'].items(), key=lambda x: x[0])
+        items = sorted(patch['iterable_item_removed'].items(),
+                       key=lambda x: x[0])
         for route, change in items:
             m = name_idx_re.search(route)
             assert m is not None, route
@@ -83,14 +88,14 @@ def apply_file_patch(src, patch):
             obj = navigate(src_ast, route_wo_index)
             for e in obj:
                 if type(e) is ast.keyword:
-                    if e.arg==change:
-                        # this is a kwarg list and we've already removed an item
+                    if e.arg == change:
+                        # this is a kwarg list and we already removed an item
                         obj.remove(e)
                 elif type(e) is ast.Name:
-                    if e.id==change:
+                    if e.id == change:
                         # this is an arg list and we've already removed an item
                         obj.remove(e)
-                elif change==astor.to_source(e):
+                elif change == astor.to_source(e):
                     # this is plain line of code to be removed
                     obj.remove(e)
 
