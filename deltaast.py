@@ -91,6 +91,10 @@ def tree_diff(path_old, path_new):
 
     # process files in `maybechange_files` actions
     for f in maybechange_files:
+        if f[0] == os.sep:
+            # remove leading slash
+            f = f[1:]
+        print path_old, f, os.path.join(path_old, f)
         d = str_ast_diff(open(os.path.join(path_old, f)).read(),
                          open(os.path.join(path_new, f)).read())
         if len(d) == 0:
